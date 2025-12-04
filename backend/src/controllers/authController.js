@@ -28,7 +28,7 @@ exports.signup = async (req, res) => {
     });
 
     // Tạo token JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRE
     });
 
@@ -41,8 +41,8 @@ exports.signup = async (req, res) => {
         id: user._id,
         email: user.email,
         name: user.name,
-        role_id: user.role_id,
-        created_at: user.created_at
+        role_id: user.role,
+        created_at: user.createdAt
       }
     });
 
@@ -90,7 +90,7 @@ exports.login = async (req, res) => {
     }
 
     // Tạo token JWT
-    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, {
+    const token = jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRE
     });
 
