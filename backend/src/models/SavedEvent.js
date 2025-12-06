@@ -1,3 +1,5 @@
+//BỎ
+
 const mongoose = require('mongoose');
 
 const savedEventSchema = new mongoose.Schema({
@@ -12,3 +14,6 @@ const savedEventSchema = new mongoose.Schema({
 savedEventSchema.index({ userId: 1, eventId: 1 }, { unique: true });
 
 module.exports = mongoose.model('SavedEvent', savedEventSchema);
+
+
+//KHÔNG DÙNG NỮA

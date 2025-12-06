@@ -1,154 +1,222 @@
-const SavedEvent = require('../models/SavedEvent');
+const User = require('../models/User');
 const Event = require('../models/Event');
 
-// Save an event
+// Save an event into user's folder
 const saveEvent = async (req, res) => {
   try {
     const { eventId, folderName } = req.body;
     const userId = req.user._id;
 
-    // Validate inputs
     if (!eventId) {
       return res.status(400).json({ success: false, message: 'Event ID is required' });
     }
 
-    // Check if event exists
     const event = await Event.findById(eventId);
     if (!event) {
       return res.status(404).json({ success: false, message: 'Event not found' });
     }
 
-    // Check if event is already saved
-    const existingSaved = await SavedEvent.findOne({
-      userId,
-      eventId
-    });
+    const user = await User.findById(userId);
 
-    if (existingSaved) {
-      return res.status(400).json({ success: false, message: 'Event already saved' });
+    const folderToUse = folderName || "Watch later";
+
+    // Check if folder exists
+    let folder = user.savedFolders.find(f => f.name === folderToUse);
+
+    // If folder does not exist → create one
+    if (!folder) {
+      folder = { name: folderToUse, events: [] };
+      user.savedFolders.push(folder);
     }
 
-    // Create saved event
-    const savedEvent = await SavedEvent.create({
-      userId,
-      eventId,
-      folderName: folderName || 'Watch later'
-    });
+    // Check if event already saved in this folder
+    const isAlreadySaved = folder.events.some(e => e.event.toString() === eventId);
+
+    if (isAlreadySaved) {
+      return res.status(400).json({
+        success: false,
+        message: 'Event is already saved in this folder'
+      });
+    }
+
+    // Add event
+    folder.events.push({ event: eventId });
+
+    await user.save();
 
     res.status(201).json({
       success: true,
-      data: savedEvent,
-      message: 'Event saved successfully'
+      message: 'Event saved successfully',
+      data: user.savedFolders
     });
   } catch (error) {
-    console.error('Save event error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Lỗi khi lưu event'
-    });
+    console.error("Save event error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
-// Get all saved events for logged-in user
+
 const getSavedEvents = async (req, res) => {
   try {
     const userId = req.user._id;
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
-    const skip = (page - 1) * limit;
 
-    const total = await SavedEvent.countDocuments({ userId });
-    const savedEvents = await SavedEvent.find({ userId })
-      .populate('eventId')
-      .sort({ createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .lean();
+    const user = await User.findById(userId)
+      .populate("savedFolders.events.event");
+
+    let allEvents = [];
+
+    user.savedFolders.forEach(folder => {
+      folder.events.forEach(ev => {
+        allEvents.push({
+          folder: folder.name,
+          event: ev.event,
+          savedAt: ev.savedAt
+        });
+      });
+    });
 
     res.json({
       success: true,
-      data: savedEvents,
-      pagination: {
-        page,
-        pages: Math.ceil(total / limit),
-        total,
-        limit
-      }
+      data: allEvents
     });
   } catch (error) {
-    console.error('Get saved events error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Lỗi khi lấy danh sách sự kiện đã lưu'
-    });
+    console.error("Get saved events error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
-// Update a saved event (e.g., change folder name)
 const updateSavedEvent = async (req, res) => {
   try {
-    const { savedEventId } = req.params;
-    const { folderName } = req.body;
+    const { eventId } = req.params;
+    const { newFolder } = req.body;
     const userId = req.user._id;
 
-    const savedEvent = await SavedEvent.findById(savedEventId);
-    if (!savedEvent) {
-      return res.status(404).json({ success: false, message: 'Saved event not found' });
+    const user = await User.findById(userId);
+
+    if (!newFolder) {
+      return res.status(400).json({ success: false, message: "New folder name required" });
     }
 
-    // Check ownership
-    if (savedEvent.userId.toString() !== userId.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
+    // Remove event from any folder it was in
+    let removed = false;
+    user.savedFolders.forEach(folder => {
+      const idx = folder.events.findIndex(e => e.event.toString() === eventId);
+      if (idx !== -1) {
+        folder.events.splice(idx, 1);
+        removed = true;
+      }
+    });
+
+    if (!removed) {
+      return res.status(404).json({ success: false, message: 'Event not found in any folder' });
     }
 
-    if (folderName) {
-      savedEvent.folderName = folderName;
+    // Move to new folder (create folder if not exists)
+    let targetFolder = user.savedFolders.find(f => f.name === newFolder);
+    if (!targetFolder) {
+      targetFolder = { name: newFolder, events: [] };
+      user.savedFolders.push(targetFolder);
     }
 
-    await savedEvent.save();
+    targetFolder.events.push({ event: eventId });
+
+    await user.save();
 
     res.json({
       success: true,
-      data: savedEvent,
-      message: 'Saved event updated successfully'
+      message: "Event moved successfully",
+      data: user.savedFolders
     });
+
   } catch (error) {
-    console.error('Update saved event error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Lỗi khi cập nhật saved event'
-    });
+    console.error("Update saved event error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
-// Delete a saved event
 const deleteSavedEvent = async (req, res) => {
   try {
-    const { savedEventId } = req.params;
+    const { eventId } = req.params;
     const userId = req.user._id;
 
-    const savedEvent = await SavedEvent.findById(savedEventId);
-    if (!savedEvent) {
-      return res.status(404).json({ success: false, message: 'Saved event not found' });
+    const user = await User.findById(userId);
+
+    let removed = false;
+
+    user.savedFolders.forEach(folder => {
+      const idx = folder.events.findIndex(e => e.event.toString() === eventId);
+      if (idx !== -1) {
+        folder.events.splice(idx, 1);
+        removed = true;
+      }
+    });
+
+    if (!removed) {
+      return res.status(404).json({ success: false, message: "Event not found" });
     }
 
-    // Check ownership
-    if (savedEvent.userId.toString() !== userId.toString()) {
-      return res.status(403).json({ success: false, message: 'Not authorized' });
-    }
-
-    await SavedEvent.deleteOne({ _id: savedEventId });
+    await user.save();
 
     res.json({
       success: true,
-      message: 'Saved event deleted successfully'
+      message: "Saved event removed successfully"
     });
   } catch (error) {
-    console.error('Delete saved event error:', error);
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Lỗi khi xoá saved event'
+    console.error("Delete saved event error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+//Manage to get saved events by folder
+
+const getFolderList = async (req, res) => {
+  try {
+    const userId = req.user._id;
+
+    const user = await User.findById(userId);
+
+    const folders = user.savedFolders.map(folder => ({
+      name: folder.name,
+      totalEvents: folder.events.length
+    }));
+
+    res.json({
+      success: true,
+      folders
     });
+
+  } catch (error) {
+    console.error("Get folder list error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
+  }
+};
+
+const getSavedEventsByFolder = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { folderName } = req.params;
+
+    const user = await User.findById(userId)
+      .populate("savedFolders.events.event");
+
+    const folder = user.savedFolders.find(f => f.name === folderName);
+
+    if (!folder) {
+      return res.status(404).json({
+        success: false,
+        message: "Folder not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      folder: folderName,
+      events: folder.events
+    });
+
+  } catch (error) {
+    console.error("Get events by folder error:", error);
+    res.status(500).json({ success: false, message: "Internal server error" });
   }
 };
 
@@ -156,5 +224,7 @@ module.exports = {
   saveEvent,
   getSavedEvents,
   updateSavedEvent,
-  deleteSavedEvent
+  deleteSavedEvent,
+  getFolderList,
+  getSavedEventsByFolder
 };

@@ -4,20 +4,29 @@ const auth = require('../middleware/authMiddleware');
 const {
   saveEvent,
   getSavedEvents,
+  updateSavedEvent,
   deleteSavedEvent,
-  updateSavedEvent
+  getFolderList,
+  getSavedEventsByFolder
 } = require('../controllers/savedEventController');
 
-// Get all saved events for logged-in user
-router.get('/', auth, getSavedEvents);
 
-// Save an event
+// Save event
 router.post('/', auth, saveEvent);
 
-// Update a saved event (e.g., change folder name)
-router.put('/:savedEventId', auth, updateSavedEvent);
+// Get all saved events
+router.get('/', auth, getSavedEvents);
 
-// Delete a saved event
-router.delete('/:savedEventId', auth, deleteSavedEvent);
+// Get folder names
+router.get('/folders', auth, getFolderList);
+
+// Get events by folder
+router.get('/folder/:folderName', auth, getSavedEventsByFolder);
+
+// Move event
+router.put('/:eventId', auth, updateSavedEvent);
+
+// Delete saved event
+router.delete('/:eventId', auth, deleteSavedEvent);
 
 module.exports = router;
