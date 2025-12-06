@@ -173,5 +173,3 @@ module.exports = {
   updateReminder,
   deleteReminder
 };
-
-//reminder
