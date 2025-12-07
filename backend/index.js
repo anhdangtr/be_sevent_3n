@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const authRoutes = require('./src/routes/authRoutes');
 const eventRoutes = require('./src/routes/eventRoutes');
+const userRoutes = require('./src/routes/userRoutes');
 
 // Load environment variables
 dotenv.config();
@@ -57,10 +58,10 @@ if (!mongoUri) {
 
 mongoose.connect(mongoUri)
   .then(() => {
-    console.log('✓ Kết nối MongoDB thành công');
+    console.log(' Kết nối MongoDB thành công');
   })
   .catch((error) => {
-    console.error('✗ Lỗi kết nối MongoDB:', error.message);
+    console.error(' Lỗi kết nối MongoDB:', error.message);
     process.exit(1);
   });
 
@@ -77,6 +78,9 @@ app.use(express.urlencoded({ extended: true }));
 
 //Fetch all revent routes
 app.use('/api/events', eventRoutes);
+
+// Fetch all user routes
+app.use('/api/user',userRoutes);
 
 // Basic Route
 app.get('/', (req, res) => {
@@ -103,5 +107,5 @@ app.use((req, res) => {
 // Start Server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
-  console.log(`\n🚀 Server đang chạy tại http://localhost:${PORT}`);
+  console.log(`\n Server đang chạy tại http://localhost:${PORT}`);
 });
