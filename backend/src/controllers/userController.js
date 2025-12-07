@@ -35,26 +35,43 @@ const getAllUser = async (req, res) => {
 
 const updateRoleUser = async (req, res) => {
     try {
-        const userId = req.params.id;
+        const currentUserId = req.user.id;    // user đang đăng nhập
+        const targetUserId = req.params.id;   // user cần đổi role
 
-        const user = await User.findById(userId);
-        if (!user) return res.status(404).json({ message: "User not found" });
+        // Kiểm tra 2 user
+        const currentUser = await User.findById(currentUserId);
+        const targetUser = await User.findById(targetUserId);
 
-        // Đổi role
-        user.role = user.role === "admin" ? "user" : "admin";
-        await user.save();
+        if (!currentUser || !targetUser) {
+            return res.status(404).json({ message: "User not found" });
+        }
+
+        // Hoán đổi role
+        const tempRole = currentUser.role;
+        currentUser.role = targetUser.role;
+        targetUser.role = tempRole;
+
+        await currentUser.save();
+        await targetUser.save();
+
+        // Nếu role của user hiện tại thay đổi → logout
+        const logout = true;
 
         return res.json({
             success: true,
-            message: "Role updated successfully",
-            newRole: user.role,
-            logout: true   // báo frontend logout
+            message: "Roles swapped successfully",
+            currentUserNewRole: currentUser.role,
+            targetUserNewRole: targetUser.role,
+            logout,
         });
 
     } catch (err) {
+        console.log(err);
         return res.status(500).json({ message: "Server error" });
     }
 };
+
+
 
 module.exports = {getAllUser, updateRoleUser};
 
