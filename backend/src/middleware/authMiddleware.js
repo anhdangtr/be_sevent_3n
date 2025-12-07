@@ -12,24 +12,24 @@ const authenticate = async (req, res, next) => {
     }
 
     if (!token) {
-      return sendError(res, 401, 'Vui lòng đăng nhập để truy cập');
+      return sendError(res, 'Vui lòng đăng nhập để truy cập', 401);
     }
 
     const decoded = verifyToken(token);
     console.log('[auth] verifyToken result:', decoded ? `id=${decoded.id}` : 'null');
     if (!decoded) {
-      return sendError(res, 401, 'Token không hợp lệ hoặc đã hết hạn');
+      return sendError(res, 'Token không hợp lệ hoặc đã hết hạn', 401);
     }
 
     const user = await User.findById(decoded.id).select('-password');
     if (!user) {
-      return sendError(res, 401, 'Người dùng không tồn tại');
+      return sendError(res, 'Người dùng không tồn tại', 401);
     }
 
     req.user = user;
     next();
   } catch (error) {
-    sendError(res, 401, 'Không có quyền truy cập');
+    sendError(res, 'Không có quyền truy cập', 401);
   }
 };
 

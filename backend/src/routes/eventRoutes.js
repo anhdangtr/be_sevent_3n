@@ -1,3 +1,5 @@
+// src/routes/eventRoutes.js
+
 const express = require('express');
 const { 
   getAllEvents, 
@@ -6,30 +8,35 @@ const {
   createEvent, 
   updateEvent, 
   deleteEvent,
-  likeEvent,
-  saveEvent,
   checkIfUserLiked,
-  toggleLikeEvent
+  checkIfUserSaved,
+  toggleLikeEvent,
+  toggleSaveEvent
 } = require('../controllers/eventController');
-const auth = require('../middleware/authMiddleware'); // Middleware xác thực JWT
+
+const auth = require('../middleware/authMiddleware');
 
 const router = express.Router();
 
-// Public Routes (không cần auth)
-router.get('/', getAllEvents);                    // Lấy tất cả events với pagination
-router.get('/trending', getTrendingEvents);       // Lấy events nổi bật
-router.get('/:eventId', auth, getEventById);            // Lấy chi tiết event theo ID
+// ===== PUBLIC ROUTES (không cần auth) =====
+router.get('/', getAllEvents);                 // Lấy tất cả events (có pagination)
+router.get('/trending', getTrendingEvents);    // Lấy events nổi bật
 
-// Check if user liked the event (protected route)
-router.get('/:eventId/check-like', auth, checkIfUserLiked);
-// Toggle like/unlike event (protected route)
+// ===== PROTECTED ROUTES (cần auth) =====
+// Chi tiết event - phải để TRƯỚC route parameters khác
+router.get('/:eventId', auth, getEventById);   
+
+// Check status routes
+router.get('/:eventId/check-liked', auth, checkIfUserLiked); 
+router.get('/:eventId/check-saved', auth, checkIfUserSaved);
+
+// Action routes
 router.post('/:eventId/toggle-like', auth, toggleLikeEvent);
+router.post('/:eventId/toggle-save', auth, toggleSaveEvent);
 
-// Private Routes (cần auth), dành cho admin
-router.post('/', auth, createEvent);              // Tạo event mới
-router.put('/:eventId', auth, updateEvent);            // Cập nhật event
-router.delete('/:eventId', auth, deleteEvent);         // Xóa event
-router.post('/:eventId/like', auth, likeEvent);        // Like event
-router.post('/:eventId/save', auth, saveEvent);        // Save event
+// ===== ADMIN ROUTES (cần auth + admin role - nên xử lý ở middleware) =====
+router.post('/', auth, createEvent);           // Tạo event mới
+router.put('/:eventId', auth, updateEvent);    // Cập nhật event
+router.delete('/:eventId', auth, deleteEvent); // Xóa event
 
 module.exports = router;
