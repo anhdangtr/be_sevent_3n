@@ -7,6 +7,7 @@ const {
   updateSavedEvent,
   deleteSavedEvent,
   getFolderList,
+  createFolder,
   getSavedEventsByFolder
 } = require('../controllers/savedEventController');
 
@@ -17,16 +18,19 @@ router.post('/', auth, saveEvent);
 // Get all saved events
 router.get('/', auth, getSavedEvents);
 
-// Get folder names
-router.get('/folders', auth, getFolderList);
-
-// Get events by folder
-router.get('/folder/:folderName', auth, getSavedEventsByFolder);
-
 // Move event
 router.put('/:eventId', auth, updateSavedEvent);
 
 // Delete saved event
 router.delete('/:eventId', auth, deleteSavedEvent);
+
+// Get folder names
+router.get('/get-folders', auth, getFolderList);
+
+// Get events by folder
+router.get('/folder/:folderName', auth, getSavedEventsByFolder);
+
+// Create new folder
+router.post('/post-folders', auth, createFolder);
 
 module.exports = router;

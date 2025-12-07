@@ -220,11 +220,60 @@ const getSavedEventsByFolder = async (req, res) => {
   }
 };
 
+const createFolder = async (req, res) => {
+  try {
+    const userId = req.user._id;
+    const { folderName } = req.body;
+
+    if (!folderName || !folderName.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: "Folder name is required"
+      });
+    }
+
+    const user = await User.findById(userId);
+
+    const exists = user.savedFolders.find(
+      (folder) => folder.name.toLowerCase() === folderName.toLowerCase()
+    );
+
+    if (exists) {
+      return res.status(400).json({
+        success: false,
+        message: "Folder already exists"
+      });
+    }
+
+    const newFolder = {
+      name: folderName,
+      events: []
+    };
+
+    user.savedFolders.push(newFolder);
+    await user.save();
+
+    res.status(201).json({
+      success: true,
+      message: "Folder created successfully",
+      folder: newFolder
+    });
+
+  } catch (error) {
+    console.error("Create folder error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal server error"
+    });
+  }
+};
+
 module.exports = {
   saveEvent,
   getSavedEvents,
   updateSavedEvent,
   deleteSavedEvent,
   getFolderList,
+  createFolder,
   getSavedEventsByFolder
 };
