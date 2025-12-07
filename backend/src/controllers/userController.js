@@ -8,7 +8,7 @@ const getAllUser = async (req, res) => {
 
         const query = {
             $or: [
-                { username: { $regex: search, $options: "i" } },
+                { name: { $regex: search, $options: "i" } },
                 { email: { $regex: search, $options: "i" } }
             ]
         };
@@ -35,10 +35,10 @@ const getAllUser = async (req, res) => {
 
 const updateRoleUser = async (req, res) => {
     try {
-        const currentUserId = req.user.id;    // user đang đăng nhập
-        const targetUserId = req.params.id;   // user cần đổi role
+        const currentUserId = req.user.id;    
+        const targetUserId = req.params.id;   
 
-        // Kiểm tra 2 user
+       
         const currentUser = await User.findById(currentUserId);
         const targetUser = await User.findById(targetUserId);
 
@@ -46,7 +46,7 @@ const updateRoleUser = async (req, res) => {
             return res.status(404).json({ message: "User not found" });
         }
 
-        // Hoán đổi role
+        
         const tempRole = currentUser.role;
         currentUser.role = targetUser.role;
         targetUser.role = tempRole;
@@ -54,7 +54,7 @@ const updateRoleUser = async (req, res) => {
         await currentUser.save();
         await targetUser.save();
 
-        // Nếu role của user hiện tại thay đổi → logout
+        
         const logout = true;
 
         return res.json({
