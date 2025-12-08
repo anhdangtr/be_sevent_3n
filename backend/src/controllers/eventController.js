@@ -34,7 +34,12 @@ const getAllEvents = async (req, res) => {
     }
 
     if (category && category !== 'all') {
-      query.category = category;
+      const mongoose = require('mongoose');
+      try {
+        query.category = mongoose.Types.ObjectId(category);
+      } catch (err) {
+        query.category = category; // fallback nếu không phải ObjectId
+      }
     }
 
     const totalEvents = await Event.countDocuments(query);
